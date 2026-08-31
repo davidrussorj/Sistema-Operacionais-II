@@ -1,2 +1,2 @@
-# T-picos-Especiais-em-Ci-ncia-da-Computa-o-I
+Sistema-Operacionais-II
 Grupo: David Cubric , Leonardo de Barros , Eduardo Bensabat
