@@ -1,0 +1,10 @@
+lista01/ex1_tamanho
+lista01/ex2_leitura_parcial
+lista01/ex3_stat
+lista01/ex4_stat_lstat
+lista01/ex5_fstat
+lista01/ex6_bytes_nulos
+lista01/ex7_truncar
+lista01/ex8_multiplos_arquivos
+*.o
+materiais/
