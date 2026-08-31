@@ -2,6 +2,83 @@
 
 Exercícios da disciplina Tópicos Especiais em Sistemas Computacionais I / SO 2.
 
+Base teórica: **Aula 06 - Manipulação de Arquivos** (slides 44 e 62-65).
+
+## Base teórica (Aula 06)
+
+### Descritor de arquivo e tabela de arquivos abertos (slides 44-45)
+
+Toda syscall de I/O opera sobre um **file descriptor** (fd), não diretamente
+sobre o caminho do arquivo. O kernel mantém, por processo, uma **tabela de
+arquivos abertos**: o fd é apenas um índice nessa tabela, e cada entrada
+aponta para uma estrutura que por sua vez aponta para o **inode**
+correspondente no sistema de arquivos. Quando um programa inicia, três
+arquivos já estão abertos por padrão: `stdin`, `stdout` e `stderr`,
+ocupando os descritores `0`, `1` e `2`. Essa tabela tem tamanho fixo e
+limitado — é por isso que `open()` pode falhar por excesso de arquivos
+abertos.
+
+Esse modelo (fd como índice, sem relação direta com o caminho) é a razão
+de existir tanto `stat()` (opera em caminho) quanto `fstat()` (opera em
+fd): a chamada usada depende de qual das duas informações o programa tem
+disponível no momento.
+
+### lseek — reposicionar o cursor de um fd (slide 63)
+
+```c
+#include <sys/types.h>
+#include <unistd.h>
+off_t lseek(int fd, off_t offset, int whence);
+```
+
+`lseek()` troca a posição de leitura/escrita associada a um file
+descriptor. O terceiro argumento, `whence`, define a partir de onde o
+`offset` é contado:
+
+- `SEEK_SET` — offset absoluto a partir do início do arquivo
+- `SEEK_CUR` — offset relativo à posição atual do cursor
+- `SEEK_END` — offset relativo ao final do arquivo
+
+Exemplos direto do slide:
+```c
+newpos = lseek(fd, 16, SEEK_SET);  /* move para o byte 16 */
+newpos = lseek(fd, 4, SEEK_CUR);   /* move 4 bytes a frente */
+newpos = lseek(fd, -8, SEEK_END);  /* move 8 bytes antes do fim */
+```
+
+Os exercícios 1, 2, 6 e 7 desta lista são, essencialmente, variações
+diretas desses três exemplos: medir tamanho (`SEEK_END` com offset 0),
+pular para uma posição absoluta (`SEEK_SET`) e navegar byte a byte.
+
+### stat, fstat, lstat — status de um arquivo (slides 64-65)
+
+```c
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+int stat(const char *path, struct stat *buf);
+int lstat(const char *path, struct stat *buf);
+int fstat(int fd, struct stat *buf);
+```
+
+- **`stat`** — preenche `buf` com as informações do arquivo apontado por `path`.
+- **`lstat`** — idêntico ao `stat()`, exceto quando `path` é um link
+  simbólico: nesse caso retorna informações sobre o **próprio link**, não
+  sobre o arquivo que ele aponta.
+- **`fstat`** — idêntico ao `stat()`, mas a referência ao arquivo é feita
+  por um **file descriptor** já aberto, em vez de um caminho.
+
+As três chamadas preenchem a mesma `struct stat`, que inclui (entre outros
+campos citados no slide 65): `st_ino` (número do inode), `st_mode`
+(permissões e tipo do arquivo), `st_nlink` (contagem de links), `st_uid`/
+`st_gid` (dono/grupo), `st_size` (tamanho em bytes) e os timestamps
+`st_atime`, `st_mtime`, `st_ctime` (acesso, modificação, mudança de
+status).
+
+Os exercícios 3, 4, 5 e 8 exploram exatamente essas três variações da
+mesma consulta — o que muda entre eles é só *como* o arquivo é
+referenciado (caminho vs. fd) e *se* o link deve ou não ser seguido.
+
 ## Início rápido
 
 ```bash
