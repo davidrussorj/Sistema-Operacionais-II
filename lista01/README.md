@@ -2,6 +2,26 @@
 
 Exercícios da disciplina Tópicos Especiais em Sistemas Computacionais I / SO 2.
 
+## Início rápido
+
+```bash
+cd lista01
+make    # compila e gera um executavel por exercicio
+```
+
+Executando todos os exercícios:
+
+```bash
+./ex1_tamanho testes/arquivo_teste.txt
+./ex2_leitura_parcial testes/arquivo_teste.txt
+./ex3_stat testes/arquivo_teste.txt
+./ex4_stat_lstat testes/link_teste.txt
+./ex5_fstat testes/arquivo_teste.txt
+./ex6_bytes_nulos testes/binario_teste.dat
+cp testes/arquivo_para_truncar.txt /tmp/copia.txt && ./ex7_truncar /tmp/copia.txt && cat /tmp/copia.txt
+./ex8_multiplos_arquivos testes/arquivo_teste.txt testes/link_teste.txt testes/binario_teste.dat testes/subdir_teste
+```
+
 ## Como compilar
 
 Dentro da pasta `lista01/`, rode:
