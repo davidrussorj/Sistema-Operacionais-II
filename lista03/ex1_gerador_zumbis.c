@@ -1,4 +1,5 @@
-/* Exercicio 1 - gerador de processos zumbis (programa auxiliar do enunciado, usado para testar o ex2_przombies) */
+/* Exercicio 1 - gerador de processos zumbis (programa auxiliar do enunciado, usado para testar o ex2_przombies)
+ * Base teorica: Aula 08 - Processos, slides 26-31 (fork) e 35-38 (o filho vira zumbie por falta de wait) */
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

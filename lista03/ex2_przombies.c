@@ -1,4 +1,5 @@
-/* Exercicio 2 - daemon przombies: varre /proc de n em n segundos e loga processos zumbis */
+/* Exercicio 2 - daemon przombies: varre /proc de n em n segundos e loga processos zumbis
+ * Base teorica: Aula 08 - Processos, slides 26-31 (fork), 35-38 (zombie/wait), 45-59 (signal/sigaction) */
 #include <ctype.h>
 #include <dirent.h>
 #include <fcntl.h>
@@ -15,7 +16,9 @@ static int log_fd;
 static void trata_sigterm(int sig) {
     (void)sig;
     const char msg[] = "== daemon finalizado por SIGTERM ==\n";
-    write(log_fd, msg, sizeof(msg) - 1);
+    /* write() e close() sao async-signal-safe (perror() e fprintf() nao sao) */
+    ssize_t ret = write(log_fd, msg, sizeof(msg) - 1);
+    (void)ret; /* nada a fazer aqui se falhar: o processo vai terminar de qualquer forma */
     close(log_fd);
     _exit(0);
 }
@@ -30,7 +33,8 @@ static int eh_pid(const char *nome) {
 }
 
 static void escreve(const char *texto) {
-    write(log_fd, texto, strlen(texto));
+    if (write(log_fd, texto, strlen(texto)) < 0)
+        perror("write");
 }
 
 static void varre_zumbis(void) {
