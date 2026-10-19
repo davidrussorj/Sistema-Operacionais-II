@@ -1,0 +1,10 @@
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+marcos:x:1003:1003:Marcos,,,:/home/marcos:/bin/zsh
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+beatriz:x:1001:1001:Beatriz,,,:/home/beatriz:/bin/bash
+sync:x:4:65534:sync:/bin:/bin/sync
+ana:x:1002:1002:Ana,,,:/home/ana:/bin/bash
+www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+carlos:x:1004:1004:Carlos,,,:/home/carlos:/bin/sh
+backup:x:34:34:backup:/var/backups:/usr/sbin/nologin
