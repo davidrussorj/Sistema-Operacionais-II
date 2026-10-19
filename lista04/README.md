@@ -6,6 +6,12 @@ Base teórica: **Aula 10 - Programação em Shell** (slides 9-17, 22-62) e o
 material de apoio **"Uso de variáveis e vetores em Shell Script"**, ambos do
 Classroom da turma.
 
+Cada script é comentado bloco a bloco: o cabeçalho traz o enunciado, o uso,
+os códigos de saída e os slides correspondentes, e cada etapa explica o que
+faz e por quê. Todos validam a entrada antes de agir (ver "Convenções dos
+scripts"), e a pasta `testes/` tem uma bateria de testes automáticos que
+roda os 16 exercícios contra entradas conhecidas (`make test`).
+
 ## Base teórica (Aula 10)
 
 ### Script, `#!` e permissão de execução (slides 22-23)
@@ -166,6 +172,7 @@ Complementa a aula com itens usados diretamente aqui:
 ```bash
 cd lista04
 make                    # dá permissão de execução e verifica a sintaxe dos 16 scripts
+make test               # roda os testes automáticos de todos os exercícios
 T=$(mktemp -d)          # pasta temporária para os exercícios que criam ou alteram arquivos
 
 ./ex1_banner_hora.sh    # precisa do banner (ver "Dependências")
@@ -200,9 +207,15 @@ da pasta `lista04/`, rode
 make
 ```
 
-Isso dá permissão de execução (`chmod +x`) aos 16 scripts, verifica a
-sintaxe de cada um com `bash -n` e, se o `shellcheck` estiver instalado,
-roda a análise estática nele também (os 16 scripts passam sem nenhum aviso).
+Isso dá permissão de execução (`chmod +x`) aos 16 scripts e ao testador,
+verifica a sintaxe de cada um com `bash -n` e, se o `shellcheck` estiver
+instalado, roda também a análise estática (todos passam sem nenhum aviso).
+
+Para rodar os testes automáticos (ver "Testes automáticos"):
+
+```bash
+make test
+```
 
 Para apagar os arquivos gerados pelo ex16 (`arq.txt` e `erros.txt`):
 
@@ -222,6 +235,34 @@ sudo apt install sysvbanner ncal    # banner (ex1) e cal (ex6)
 Se faltar algum deles, o script avisa qual pacote instalar e sai com erro,
 em vez de deixar o shell imprimir `command not found` no meio da saída.
 
+## Convenções dos scripts
+
+Os 16 scripts seguem o mesmo esqueleto, para ficarem fáceis de ler e de
+testar:
+
+- **Cabeçalho comentado** com o enunciado, a forma de uso, os códigos de
+  saída e os slides da Aula 10 usados.
+- **Duas funções auxiliares** (funções: slides 53-57), equivalentes em
+  shell ao `perror()` + `exit()` dos programas em C das listas anteriores:
+  - `uso` mostra no stderr o motivo e a forma correta de chamar o script, e
+    sai com **status 2**;
+  - `erro` mostra no stderr o motivo do erro e sai com **status 1**.
+- **Validações antes de qualquer ação**, do problema mais básico ao mais
+  específico, cada um com sua própria mensagem: quantidade de argumentos,
+  argumento vazio (`""`), existência, tipo (arquivo × diretório),
+  permissões (`-r`, `-w`, `-x`), fim de entrada nos `read` (Ctrl+D ou pipe
+  que acabou) e formato do que foi digitado.
+- **Códigos de saída consistentes**:
+
+| Status | Significado |
+|---|---|
+| 0 | sucesso (no ex3, "o arquivo existe") |
+| 1 | erro de execução ou de validação: arquivo inexistente, sem permissão, entrada inválida, comando não instalado (no ex3, "o arquivo não existe") |
+| 2 | uso incorreto: quantidade errada de argumentos ou argumento vazio |
+
+Assim dá para usar qualquer script dentro de um `if` em outro script, e os
+testes automáticos conferem não só o texto, mas também o status.
+
 ## Arquivos de teste
 
 | Arquivo | Para que serve |
@@ -234,6 +275,53 @@ em vez de deixar o shell imprimir `command not found` no meio da saída.
 | `testes/musicas_modelo/` | Modelo para os exercícios que renomeiam (ex7, ex8): `faixa01.mpeg3`, `faixa02.mpeg3`, `minha musica.mpeg3` (com espaço), `ja_existe.mpeg3` + `ja_existe.mp3` (colisão), `notas.mpeg3.txt` (`.mpeg3` no meio do nome) e `letra.txt`. **Sempre copie antes de rodar**, os scripts renomeiam de verdade. |
 | `testes/passwd_exemplo` | `/etc/passwd` de mentira com 10 usuários fora de ordem e shells repetidos **em linhas não vizinhas** (ex11, ex12), para a saída ser previsível em qualquer máquina. |
 | `testes/conta_exemplo/` | "Conta" com cinco diretórios de tamanhos conhecidos: `vazio/`, `pequeno/` (2 KB), `medio/` (20 KB), `.oculto/` (40 KB, diretório oculto) e `grande/` (60 KB) (ex15). |
+| `testes/rodar_testes.sh` | Bateria de testes automáticos de todos os exercícios (ver abaixo). |
+
+## Testes automáticos
+
+```bash
+make test                       # todos os exercícios
+./testes/rodar_testes.sh 7 8    # só os exercícios 7 e 8
+```
+
+O testador roda cada script com entradas conhecidas e confere três coisas:
+o **texto** da saída (stdout e stderr), o **status de saída** e os
+**arquivos** criados ou alterados. Cada conferência aparece como `OK`,
+`FALHOU` (com o esperado e o obtido lado a lado) ou `PULADO`, e no final sai
+o resumo; o status do testador é 0 só se nada falhou. São cerca de 245
+conferências, cobrindo para cada exercício:
+
+- o **caso normal** com os arquivos de `testes/` e a saída exata esperada;
+- os **casos de fronteira** (arquivo de exatamente 100 bytes, arquivo vazio,
+  última linha sem `\n`, 10º argumento, diretório vazio, rodar duas vezes);
+- as **pegadinhas** do Racional (o script não cria um arquivo chamado `100`,
+  `*` digitado não vira wildcard, `.oculto` aparece no ex15, `uniq` sem
+  `sort` não remove nada, `>>` não apaga as ideias anteriores...);
+- **cada validação**: argumentos a mais/a menos, argumento vazio, arquivo
+  inexistente, diretório no lugar de arquivo, sem permissão, entrada que
+  termina antes da hora — conferindo o status (1 ou 2) e a mensagem.
+
+Técnicas usadas, explicadas nos comentários do testador:
+
+- **Nada em `testes/` é alterado**: o que é destrutivo roda em cópias numa
+  pasta temporária, apagada no final por um `trap` (mesmo com Ctrl+C).
+- **`date` falso**: para a saída dos ex1 e ex14 não depender da hora, o
+  testador põe na frente do `PATH` um `date` que sempre imprime a mesma data.
+  Com ele, o ex14 grava exatamente o exemplo do enunciado,
+  `30/08/2008 10:21 Fazer script para remover usuários`.
+- **`PATH` mínimo**, sem `banner` nem `cal`, para testar a mensagem de
+  "comando não instalado" mesmo numa máquina que tem os dois.
+- **Limite de 30 s por execução** (`timeout`): um script que entre em laço
+  infinito vira `FALHOU` em vez de travar o testador.
+- **`PULADO` em vez de falha** quando o teste não se aplica: `banner`/`cal`
+  não instalados, testes de permissão rodando como root (o root ignora
+  permissões), e a busca completa do ex16 a partir de `/`, que demora.
+
+Para conferir que os testes pegam erros de verdade, foram injetados 20 bugs
+nos scripts, um de cada vez (trocar `-gt` por `-ge` no ex4, tirar o `sort`
+do ex12, trocar `>>` por `>` no ex14, misturar stderr e stdout no ex16,
+`shift 2` no ex10...): todos foram detectados, cada um derrubando de 1 a 9
+conferências.
 
 ## Como rodar cada exercício
 
@@ -260,6 +348,9 @@ cut -c13-20 -> '5:49:06 '
 #     #   # #        #  #     #   # #    #   #  #     #
  #####     #         #   #####     #      ###    #####
 ```
+
+**Validações:** recusa argumentos (status 2); confere se o `banner` está
+instalado e, se não estiver, diz qual pacote instalar (status 1).
 
 **Racional:** o shell resolve a linha de dentro para fora. Primeiro executa
 o que está em `$(...)` (slide 60): `date` imprime algo como
@@ -290,6 +381,10 @@ proposital, é a linha do enunciado.
 Mostra a data de hoje (`Hoje é 19/10/2026`) e lista todos os arquivos do
 diretório pessoal, inclusive os ocultos.
 
+**Validações:** recusa argumentos (status 2); confere que `$HOME` está
+definida, existe, é um diretório e pode ser listada (permissões `r` e `x`)
+(status 1).
+
 **Racional:** "arquivos da sua conta" são os do diretório pessoal, que fica
 em `$HOME` (slide 28) — usar a variável em vez de escrever `/home/usuario`
 faz o script funcionar para qualquer usuário. O `-a` do `ls` é necessário
@@ -311,6 +406,9 @@ Informa se o arquivo passado na linha de comando existe. O status de saída
 também reflete a resposta (0 = existe), para o script poder ser usado
 dentro de um `if` em outro script.
 
+**Validações:** exatamente um argumento, e não vazio (status 2). O status
+de saída é a própria resposta: 0 = existe, 1 = não existe ou link quebrado.
+
 **Racional:** o teste é `[ -e "$1" ]` (slide 35). `-e` e não `-f`, porque
 `-f` só é verdadeiro para arquivo regular — um diretório existe, mas
 falharia no `-f`. As aspas em `"$1"` são obrigatórias, e por dois motivos
@@ -331,6 +429,12 @@ distinguir esse caso.
 ```
 Se o arquivo existir, mostra o tamanho e diz se ele passa de 100 bytes.
 
+**Validações:** exatamente um argumento, e não vazio (status 2); o arquivo
+precisa existir (link quebrado tem mensagem própria) e não pode ser um
+diretório, cujo "tamanho" no `stat` não é o do conteúdo; e o valor
+devolvido pelo `stat` é conferido como número antes da comparação
+(status 1).
+
 **Racional:** o tamanho vem de `stat -L -c %s`, como o enunciado sugere
 (`%s` = tamanho em bytes). O `-L` faz o `stat` seguir links simbólicos:
 sem ele, o `stat` de um link devolve o tamanho **do link** (a quantidade de
@@ -350,6 +454,12 @@ exista" — e para não deixar o `stat` imprimir o erro dele.
 ```
 Mostra o número de processos em execução contando o próprio script e o
 número sem ele.
+
+**Validações:** recusa argumentos (status 2); confere que `/proc` existe
+(não existe fora do Linux) e que a contagem achou pelo menos um processo,
+o próprio script (status 1). O `shopt -s nullglob` faz um padrão sem
+correspondência virar uma lista vazia; sem ele, o bash deixaria o texto
+`/proc/[0-9]*` na lista e a contagem daria 1 em vez de acusar o problema.
 
 **Racional:** cada processo em execução tem um diretório `/proc/<PID>`
 (o mesmo `/proc` usado no `ex2_przombies` da Lista 3 — e é de lá que o
@@ -377,6 +487,12 @@ o `--no-headers`, dá 3 a mais.
 Pergunta o mês e o ano e mostra o calendário com o `cal`. Para testar sem
 digitar: `printf '10\n2026\n' | ./ex6_calendario.sh`.
 
+**Validações:** recusa argumentos (status 2); confere se o `cal` está
+instalado antes de perguntar; acusa a entrada que termina antes do mês ou
+do ano (Ctrl+D, ou pipe com menos linhas), mas aceita a última linha sem
+`\n`; o mês tem que ser de 1 a 12 (com ou sem zero à esquerda) e o ano só
+dígitos, no máximo 4, de 1 a 9999 (todos status 1).
+
 **Racional:** os valores são lidos com `read` (slide 25; `-p` mostra o
 texto da pergunta e `-r` não deixa a `\` ser interpretada). Antes de chamar
 o `cal`, as entradas são validadas com `case` (slides 45-47): o mês tem que
@@ -401,7 +517,15 @@ ls /tmp/musicas
 `testes/musicas_modelo`. Com o modelo, o resultado esperado é: 3 arquivos
 renomeados (`faixa01`, `faixa02` e `minha musica`), `ja_existe.mpeg3`
 pulado com aviso (porque `ja_existe.mp3` já existe), e `notas.mpeg3.txt` e
-`letra.txt` intocados.
+`letra.txt` intocados. A última linha da saída é
+`3 arquivo(s) renomeado(s), 1 pulado(s).`
+
+**Validações:** exatamente um argumento, e não vazio (status 2); o
+diretório precisa existir, ser um diretório e ter permissão de escrita e de
+acesso (`w` e `x`), porque renomear altera o diretório, não o arquivo
+(status 1). Durante o laço: só arquivos comuns são renomeados (um
+diretório chamado `algo.mpeg3` fica como está), um `.mp3` existente nunca é
+sobrescrito, e se algum `mv` falhar o script termina com status 1.
 
 **Racional:** o laço é `for arquivo in "$dir"/*.mpeg3` — quem gera a lista
 é a expansão de wildcard do shell (slide 17), e cada nome expandido vira
@@ -431,6 +555,13 @@ Para testar sem digitar:
 `printf '/tmp/musicas8\nmpeg3\nogg\n' | ./ex8_renomear_interativo.sh`
 (aqui são 4 renomeados, porque não existe `ja_existe.ogg` para colidir).
 
+**Validações:** recusa argumentos (status 2); acusa a entrada que termina
+antes de cada uma das três respostas; o diretório não pode ser vazio e tem
+que existir, ser diretório e ter permissão `w` e `x`; as extensões não
+podem ser vazias (nem só um ponto) nem conter `/` (todos status 1).
+Extensões iguais não são erro: o script avisa que não há o que fazer e sai
+com status 0. Durante o laço, as mesmas garantias do ex7.
+
 **Racional:** a lógica de renomear é a mesma do ex7; o que muda é que agora
 os três valores vêm do `read`, e texto digitado pelo usuário precisa de
 tratamentos que um argumento de linha de comando não precisa. O til: se o
@@ -451,6 +582,10 @@ recusadas antes do laço.
 ./ex9_linhas_palavras.sh testes/sem_quebra_final.txt  # Linhas: 3, Palavras: 10 (wc -l diria 2)
 ```
 Mostra o número de linhas e de palavras do arquivo.
+
+**Validações:** exatamente um argumento, e não vazio (status 2); o arquivo
+precisa existir, ser um arquivo comum (não diretório nem dispositivo) e ter
+permissão de leitura, cada caso com sua mensagem (status 1).
 
 **Racional:** a contagem é do `wc`, mas com dois cuidados. Primeiro, o
 arquivo é passado com redirecionamento de entrada, `wc -l < arquivo`
@@ -473,6 +608,11 @@ vários espaços seguidos e o TAB do `texto.txt` não geram palavras a mais
 ```
 Imprime `1: a`, `2: b`, ..., `10: j`, `11: k`, `12: l com espaço`.
 
+**Validações:** pelo menos um argumento (status 2). Um argumento vazio
+(`""`) é aceito e listado como `1: `, porque é um argumento de verdade. A
+impressão usa `printf '%d: %s\n'` em vez de `echo`, para cada argumento sair
+exatamente como veio (`-n`, `\t` e `$HOME` aparecem literalmente).
+
 **Racional:** o laço é `while [ $# -gt 0 ]` com `shift` (slide 59): cada
 `shift` descarta o `$1` e "anda" com os outros (`$2` vira `$1`, `$3` vira
 `$2`...), diminuindo o `$#`. Assim o script sempre imprime `$1` e nunca
@@ -493,6 +633,13 @@ Com o arquivo de teste, a saída esperada é exatamente:
 `ana backup beatriz bin carlos daemon marcos root sync www-data` (um por
 linha).
 
+**Validações:** no máximo um argumento, e não vazio — um `""` não cai
+silenciosamente no `/etc/passwd` (status 2); o arquivo precisa existir,
+ser um arquivo comum, legível e não vazio (status 1). Só entram linhas com
+exatamente 7 campos: as outras são ignoradas, com um aviso no stderr
+dizendo quantas eram, e um arquivo sem nenhuma linha válida é recusado
+(status 1).
+
 **Racional:** cada linha do `/etc/passwd` tem 7 campos separados por `:`, e
 o primeiro é o nome do usuário. `cut -d: -f1` extrai esse campo e `sort`
 ordena, num pipe (slide 16). O enunciado sugere `cat /etc/passwd | ...`,
@@ -511,6 +658,11 @@ incluí-los seria `getent passwd`.)
 Com o arquivo de teste, a saída esperada é `/bin/bash`, `/bin/sh`,
 `/bin/sync`, `/bin/zsh` e `/usr/sbin/nologin`.
 
+**Validações:** as mesmas do ex11. Além disso, um campo de shell vazio
+vira `/bin/sh`: pelo manual do passwd (`man 5 passwd`), é esse o shell
+usado quando o campo está vazio. Sem esse tratamento, a saída teria uma
+linha em branco.
+
 **Racional:** o shell é o 7º campo (`cut -d: -f7`). A pegadinha está na
 dica do enunciado: o `uniq` só remove linhas repetidas **vizinhas**. No
 `passwd_exemplo` os shells repetidos estão espalhados de propósito, e
@@ -526,6 +678,13 @@ find /tmp/ex13 -mindepth 1 | sort
 ```
 Cria `dir1` a `dir5` e, dentro de cada um, `file1` a `file3`: 5 diretórios
 e 15 arquivos.
+
+**Validações:** no máximo um argumento, e não vazio (status 2); se a base
+já existir, precisa ser um diretório com permissão `w` e `x` (status 1).
+Cada `mkdir` e `touch` é conferido, e o script também detecta os conflitos
+de nome: um `dir1` que já existe como arquivo, ou um `file1` que já existe
+como diretório (o `touch` "daria certo" nesse caso, mas o resultado não
+seria um arquivo).
 
 **Racional:** são dois `for` aninhados (slide 36), o de fora para `n` de 1
 a 5 e o de dentro para `m` de 1 a 3, com a lista de valores vindo de
@@ -546,6 +705,12 @@ cat /tmp/ideias.txt
 Acrescenta a ideia ao arquivo, no formato do enunciado
 (`19/10/2026 15:49 Fazer script para remover usuários`). Sem a variável
 `IDEIAS`, usa `/ideias.txt`, como pede o enunciado.
+
+**Validações:** pelo menos uma palavra, e a ideia não pode ser só espaços
+(status 2). Cada ideia ocupa uma linha só: quebras de linha dentro do texto
+viram espaço. O destino não pode ser um diretório, e qualquer falha de
+escrita é informada com o motivo do sistema e a forma de liberar o arquivo
+(status 1).
 
 **Racional:** três decisões. A gravação usa `>>` (slide 12): com `>`, cada
 ideia nova apagaria todas as anteriores (o "CUIDADO!!!" do slide 10). A
@@ -577,6 +742,13 @@ KB	Diretório
 44	testes/conta_exemplo/.oculto
 64	testes/conta_exemplo/grande
 ```
+
+**Validações:** no máximo um argumento, e não vazio (status 2); sem
+argumento, a variável `HOME` precisa estar definida; a base precisa
+existir, ser um diretório e ter permissão `r` e `x` (status 1). Uma base
+sem subdiretórios não é erro: o script avisa `(nenhum subdiretório em ...)`
+e sai com status 0. Links simbólicos para diretórios não são medidos, para
+nada ser contado duas vezes (nem algo de fora da conta).
 
 **Racional:** `du -sk` mede o espaço em disco de cada diretório,
 resumido (`-s`, um total por diretório em vez de listar cada
@@ -616,6 +788,13 @@ cat arq.txt erros.txt
 chmod 755 /tmp/ex16/fechado && rm -r /tmp/ex16
 ```
 
+**Validações:** no máximo um argumento, e não vazio (status 2); o ponto de
+partida precisa existir e ser um diretório; e, como `arq.txt` e
+`erros.txt` são criados no diretório atual, o script confere antes que dá
+para escrever nele e sobrescrever os arquivos de uma execução anterior
+(status 1). Os erros de permissão do `find` não são falha do script: eles
+são o conteúdo esperado do `erros.txt`.
+
 **Racional:** é o exemplo do slide 14 aplicado ao `find`:
 `find "$inicio" -user "$usuario" > arq.txt 2> erros.txt`. O `>` redireciona
 o descritor 1 (`stdout`, os caminhos encontrados) e o `2>` redireciona o
@@ -644,6 +823,7 @@ lado a lado com a solução:
 ```bash
 cd lista04
 make
+./testes/rodar_testes.sh 4 12 14    # testes automáticos só de alguns exercícios
 T=$(mktemp -d)
 
 ./ex1_banner_hora.sh
