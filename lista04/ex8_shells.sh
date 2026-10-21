@@ -24,6 +24,16 @@
 #
 # Teoria (Aula 10): pipe - slide 16 | testes de arquivo - slide 35
 
+# Os scripts da lista são escritos para o bash (#!/bin/bash), mas o slide 23
+# ensina também a "forma fácil", sh script.sh - e aí quem executa é o
+# /bin/sh, que no Ubuntu é o dash, não o bash (slide 6: "verificar com
+# ls -l /bin/sh"). O dash não tem alguns recursos do bash ([[ =~ ]], 10#...)
+# e o echo dele interpreta \ de outro jeito. A variável BASH_VERSION só
+# existe dentro do bash: se ela estiver vazia, o exec (slide 59) troca este
+# processo por um bash rodando o mesmo script, com os mesmos argumentos e a
+# mesma entrada.
+[ -n "$BASH_VERSION" ] || exec bash "$0" "$@"
+
 # Linha válida do passwd: exatamente 7 campos separados por ":" (ver ex7).
 LINHA_VALIDA='^([^:]*:){6}[^:]*$'
 
@@ -73,9 +83,15 @@ grep -qE "$LINHA_VALIDA" "$arquivo" ||
 # Pipe (slide 16):
 #   grep -E   só as linhas válidas
 #   cut -f7   o 7º campo (o último), o shell
-#   sed       campo vazio vira /bin/sh: pelo manual do passwd (man 5
-#             passwd), shell vazio significa /bin/sh. Sem isso, apareceria
-#             uma linha em branco na saída.
+#   sed       dois ajustes no shell, separados por ";":
+#             s/\r$//  apaga o \r do fim da linha, que aparece quando o
+#                      arquivo foi salvo no Windows (linhas terminadas em
+#                      \r\n). Sem isso, "/bin/bash\r" e "/bin/bash" seriam
+#                      linhas diferentes para o uniq, e o mesmo shell
+#                      apareceria duas vezes - na tela, idênticos;
+#             s|^$|/bin/sh|  campo vazio vira /bin/sh: pelo manual do
+#                      passwd (man 5 passwd), shell vazio significa
+#                      /bin/sh. Sem isso, sairia uma linha em branco.
 #   sort      ordena, deixando as linhas iguais JUNTAS
 #   uniq      remove as repetições
 #
@@ -84,4 +100,4 @@ grep -qE "$LINHA_VALIDA" "$arquivo" ||
 # estão espalhados (o /bin/bash aparece na 1ª linha e de novo no fim), e
 # "cut -d: -f7 | uniq" sem o sort mostra 7 linhas, com /bin/bash e
 # /bin/false repetidos.
-grep -E "$LINHA_VALIDA" "$arquivo" | cut -d: -f7 | sed 's|^$|/bin/sh|' | sort | uniq
+grep -E "$LINHA_VALIDA" "$arquivo" | cut -d: -f7 | sed 's/\r$//; s|^$|/bin/sh|' | sort | uniq

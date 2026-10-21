@@ -354,6 +354,10 @@ testa_ex1() {
     roda_com_entrada $'s\n' "$s"
     confere_status "com os comandos reais (date, df, who): status 0" 0
     confere_contem "com o df real: aparece o cabeçalho do df" "Use%" "$SAIDA"
+
+    roda_com_entrada $'s\n' sh "$s"
+    confere_status "rodando com sh (dash, slide 23): status 0" 0
+    confere_contem "rodando com sh: executa os comandos" "os 3 comandos foram executados" "$SAIDA"
 }
 
 # ---------------------------------------------------------------------------
@@ -430,6 +434,36 @@ testa_ex2() {
     roda_com_entrada $'~ninguem_aqui\n' env HOME="$d/casa" "$s"
     confere_contem "~usuario não é trocado por \$HOME" "'~ninguem_aqui' não existe." "$SAIDA"
 
+    if [ "$SOU_ROOT" -eq 1 ]; then
+        pula "arquivo dentro de diretório sem permissão (rodando como root)"
+    else
+        mkdir -p "$d/fechado/sub"
+        touch "$d/fechado/dentro.txt"
+        chmod 000 "$d/fechado"
+        roda_com_entrada "$d/fechado/dentro.txt"$'\n' "$s"
+        confere_status "dentro de diretório sem permissão: status 1" 1
+        confere_contem "sem permissão: não afirma que não existe" \
+            "sem permissão para entrar em '$d/fechado'" "$ERRO"
+        confere_nao_contem "sem permissão: a resposta 'não existe' não aparece" "não existe." "$SAIDA"
+        roda_com_entrada "$d/fechado/sub/x.txt"$'\n' "$s"
+        confere_contem "sem permissão dois níveis acima: acha o diretório fechado" \
+            "sem permissão para entrar em '$d/fechado'" "$ERRO"
+        chmod 755 "$d/fechado"
+    fi
+
+    roda_com_entrada $'$HOME/x.txt\n' "$s"
+    confere_status "\$HOME digitado: status 1 (o read não expande)" 1
+    confere_contem "\$HOME digitado: explica por que não achou" "não expande variáveis" "$SAIDA"
+    roda_com_entrada "$MODELOS/arquivo_teste.txt "$'\n' "$s"
+    confere_status "espaço digitado sem querer no fim: status 1" 1
+    confere_contem "espaço sem querer no fim: avisa" "termina com espaço" "$SAIDA"
+    roda_com_entrada "$d/nada aqui "$'\n' "$s"
+    confere_nao_contem "espaço no fim de um nome que não existe de jeito nenhum: sem aviso" \
+        "termina com espaço" "$SAIDA"
+
+    roda_com_entrada "$MODELOS/subdir_teste"$'\n' sh "$s"
+    confere_contem "rodando com sh (dash): mesma resposta" "existe e é um diretório." "$SAIDA"
+
     roda_com_entrada "$MODELOS/arquivo_teste.txt" "$s"
     confere_status "última linha sem \\n: o nome é lido mesmo assim" 0
 
@@ -485,6 +519,10 @@ testa_ex3() {
     roda_em "$d" "$s" 3 5
     confere_igual "não cria arquivos no diretório atual (não usa > no teste)" "" "$(ls -A "$d")"
 
+    roda sh "$s" 3 5
+    confere_igual "rodando com sh (dash, que não tem [[ =~ ]]): mesma saída" "3 é menor que 5" "$SAIDA"
+    confere_igual "rodando com sh: nada no stderr" "" "$ERRO"
+
     roda "$s" 3.5 2
     confere_status "3.5: status 1" 1
     confere_contem "3.5: explica o erro" "'3.5' não é um número inteiro" "$ERRO"
@@ -538,6 +576,9 @@ testa_ex4() {
     roda "$s" 08
     confere_status "08: status 0 (sem 'value too great for base')" 0
     confere_igual "08 vale oito" "8 7 6 5 4 3 2 1 0" "$SAIDA"
+    roda sh "$s" 010
+    confere_igual "rodando com sh (dash, que não tem 10#): mesma saída" "10 9 8 7 6 5 4 3 2 1 0" "$SAIDA"
+    confere_igual "rodando com sh: nada no stderr" "" "$ERRO"
 
     roda "$s" 100
     palavras=$(printf '%s\n' "$SAIDA" | wc -w)
@@ -614,6 +655,8 @@ testa_ex5() {
     confere_igual "palavra '-n' sai na mensagem" "-n está contida em x-ny" "$SAIDA"
     roda "$s" 'a\tb' 'xa\tby'
     confere_igual "barra invertida sai literal" 'a\tb está contida em xa\tby' "$SAIDA"
+    roda sh "$s" ana banana
+    confere_igual "rodando com sh (dash): mesma saída" "ana está contida em banana" "$SAIDA"
 
     roda "$s" "" banana
     confere_status "primeira palavra vazia: status 2" 2
@@ -656,6 +699,8 @@ testa_ex6() {
     confere_igual "'-n' sozinho é impresso (não vira opção do echo)" "-n" "$SAIDA"
     roda_em "$d" "$s" '*' x
     confere_igual "'*' não é expandido para os arquivos do diretório" "*x" "$SAIDA"
+    roda sh "$s" a b c d e f verde azul
+    confere_igual "rodando com sh (dash): mesma saída" "abcdefverdeazul" "$SAIDA"
 
     roda "$s" " " ""
     confere_status "só espaços: status 1" 1
@@ -736,6 +781,8 @@ testa_ex7() {
     confere_nao_contem "o resto do campo 5 (sala, telefone) não aparece" "Sala 12" "$SAIDA"
     confere_igual "campo 5 vazio: usuário, TAB e nada mais" "carlos"$'\t' "${SAIDA##*$'\n'}"
     confere_igual "nada no stderr" "" "$ERRO"
+    roda sh "$s" "$MODELOS/passwd_exemplo"
+    confere_igual "rodando com sh (dash): mesma saída" "$esperado" "$SAIDA"
 
     printf '%s\n' "ana:x:1:1:Ana:/home/ana:/bin/bash" "linha sem dois pontos" \
         "bia:x:2:2:Bia:/home/bia:/bin/bash" "a:b:c" > "$d/misturado"
@@ -780,6 +827,15 @@ testa_ex8() {
     roda "$s" "$d/shell_vazio"
     confere_igual "shell vazio vira /bin/sh e não sai linha em branco" \
         "$(printf '%s\n' /bin/sh /bin/zsh)" "$SAIDA"
+
+    # Linhas com \r\n (arquivo salvo no Windows) misturadas com linhas \n.
+    printf 'a:x:1:1::/:/bin/bash\r\nb:x:2:2::/:/bin/bash\nc:x:3:3::/:\r\n' > "$d/windows"
+    roda "$s" "$d/windows"
+    confere_igual "arquivo do Windows (\\r\\n): sem \\r e sem shell repetido" \
+        "$(printf '%s\n' /bin/bash /bin/sh)" "$SAIDA"
+
+    roda sh "$s" "$MODELOS/passwd_exemplo"
+    confere_igual "rodando com sh (dash): mesma saída" "$esperado" "$SAIDA"
 
     printf '%s\n' "a:x:1:1::/:/bin/bash" "lixo" "b:x:2:2::/:/bin/bash" > "$d/misturado"
     roda "$s" "$d/misturado"
@@ -830,6 +886,8 @@ testa_ex9() {
         "$(printf '%s\n' 'Parâmetro 1: -n' 'Parâmetro 2: a\tb')" "$SAIDA"
     roda_em "$d" "$s" '*'
     confere_igual "'*' não é expandido" "Parâmetro 1: *" "$SAIDA"
+    roda sh "$s" a b c d e f
+    confere_igual "rodando com sh (dash): mesma saída" "$esperado" "$SAIDA"
 
     # Sem aspas de propósito: cada número do seq vira um parâmetro.
     # shellcheck disable=SC2046

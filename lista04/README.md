@@ -34,8 +34,26 @@ e avisa que `primeiro.sh` sozinho "pode não funcionar", porque o diretório
 atual normalmente não está no `PATH` — por isso todos os comandos deste
 README usam `./`. Os scripts desta lista usam `#!/bin/bash` em vez de
 `#!/bin/sh`: o slide 6 lembra que o bash é compatível com POSIX, e alguns
-exercícios usam recursos dele (`read -p` no ex1 e ex2, `[[ =~ ]]` no ex3 e
-ex4). O `make` faz o `chmod +x` em todos.
+exercícios usam recursos dele (`read -p` no ex1 e ex2, `[[ =~ ]]` e `10#`
+no ex3 e ex4). O `make` faz o `chmod +x` em todos.
+
+A "forma fácil" do slide 23 tem uma armadilha: `sh script.sh` executa o
+script com o `/bin/sh`, e no Ubuntu o `/bin/sh` é o **dash**, não o bash —
+é o que o slide 6 manda conferir com `ls -l /bin/sh`
+(`/bin/sh -> dash`). O dash ignora o `#!/bin/bash` (quem lê essa linha é o
+sistema, só quando o script é executado direto) e não tem `[[ =~ ]]` nem
+`10#`: sem tratamento, `sh ex3_relacao.sh 3 5` respondia
+`[[: not found` e `'3' não é um número inteiro`. Por isso todos os scripts
+começam com
+
+```sh
+[ -n "$BASH_VERSION" ] || exec bash "$0" "$@"
+```
+
+A variável `BASH_VERSION` só existe dentro do bash; se ela estiver vazia, o
+`exec` (slide 59) troca o processo atual por um bash rodando o mesmo
+script, com os mesmos argumentos e a mesma entrada. Assim `./script`,
+`bash script` e `sh script` dão exatamente o mesmo resultado.
 
 ### Redirecionamento e pipe (slides 9-16)
 
@@ -251,6 +269,9 @@ testar:
 
 - **Cabeçalho comentado** com o enunciado, a forma de uso, os códigos de
   saída e os slides da Aula 10 usados.
+- **Funcionam também com `sh script.sh`**: a primeira linha de código volta
+  para o bash se o script tiver sido chamado pelo dash (ver "Script, `#!` e
+  permissão de execução", acima).
 - **Duas funções auxiliares** (funções: slides 53-57), equivalentes em
   shell ao `perror()` + `exit()` dos programas em C das listas anteriores:
   - `uso` mostra no stderr o motivo e a forma correta de chamar o script, e
@@ -300,7 +321,7 @@ O testador roda cada script com entradas conhecidas e confere o **texto**
 da saída (stdout e stderr) e o **status de saída**. Cada conferência
 aparece como `OK`, `FALHOU` (com o esperado e o obtido lado a lado) ou
 `PULADO`, e no final sai o resumo; o status do testador é 0 só se nada
-falhou. São 231 conferências, cobrindo para cada exercício:
+falhou. São 253 conferências, cobrindo para cada exercício:
 
 - os **exemplos do próprio enunciado**, com a saída exata (`3 é menor que
   5`, `5 4 3 2 1 0`, `ana está contida em banana`, `abcdefverdeazul`, os 5
@@ -311,6 +332,7 @@ falhou. São 231 conferências, cobrindo para cada exercício:
 - as **pegadinhas** do Racional (`10 10` não é "menor", `10 9` não compara
   como texto, `010` não vira oito, `?` e `*` digitados não viram wildcard,
   `uniq` sem `sort` não remove nada, nome com espaço no `[ ]`...);
+- **rodar com `sh`** (o dash do Ubuntu), dando a mesma saída de `./script`;
 - **cada validação**: argumentos a mais/a menos, argumento vazio, número
   inválido, arquivo inexistente, diretório no lugar de arquivo, sem
   permissão, entrada que termina antes da hora — conferindo o status (1 ou
@@ -336,12 +358,12 @@ Técnicas usadas, explicadas nos comentários do testador:
   permissão rodando como root (o root ignora permissões), máquina sem
   `/dev/null` ou sem `mkfifo`.
 
-Para conferir que os testes pegam erros de verdade, foram injetados 31 bugs
+Para conferir que os testes pegam erros de verdade, foram injetados 36 bugs
 nos scripts, um de cada vez (tirar o `elif` do ex3 como no exemplo do
 enunciado, tirar o `10#` do ex4, tirar as aspas do padrão do ex5, `tr -d ' '`
 no ex6, espaço no lugar do TAB no ex7, tirar o `sort` do ex8, `shift 2` no
-ex9, pular a confirmação no ex1...): todos foram detectados, cada um
-derrubando de 1 a 23 conferências.
+ex9, pular a confirmação no ex1, tirar a volta para o bash...): todos
+foram detectados, cada um derrubando de 1 a 23 conferências.
 
 ## Como rodar cada exercício
 
@@ -451,7 +473,12 @@ comum ou um diretório.
 **Validações:** recusa argumentos, porque o enunciado pede que o nome seja
 digitado (status 2); acusa a entrada que termina antes do nome, mas aceita
 a última linha sem `\n`; recusa nome vazio (só Enter) (status 1). O status
-é a própria resposta: 0 = existe, 1 = não existe ou link quebrado.
+é a própria resposta: 0 = existe, 1 = não existe ou link quebrado. Um
+arquivo dentro de um diretório sem permissão de acesso (para um usuário
+comum, `/root/.bashrc`) não é dado como "não existe": o script avisa que
+não tem como saber (status 1). E quando o arquivo não é achado por um
+engano comum de digitação, a resposta vem com uma dica: `$HOME` digitado
+(o `read` não expande variáveis) ou um espaço sem querer no fim do nome.
 
 **Racional:** o nome vem de `IFS= read -r` (slide 25). O `-r` impede que
 uma `\` digitada seja interpretada, e o `IFS=` vazio só para esse `read`
@@ -470,7 +497,13 @@ seguem links simbólicos, então para um link eles descrevem o arquivo
 apontado — o script usa `-L` (que testa o próprio link) para dizer "é um
 link simbólico para um arquivo comum"; e um link quebrado dá `-e` falso
 mesmo estando no diretório, e ganha uma mensagem própria dizendo para onde
-ele aponta. Por fim, o `~`: na linha de comando o shell troca `~` pelo
+ele aponta. Uma terceira sutileza é de permissão: para saber se um arquivo
+existe, o sistema precisa entrar no diretório dele (permissão `x`), então
+dentro de um diretório fechado o `-e` dá falso mesmo o arquivo existindo.
+Quando o `-e` falha, o script sobe pelo caminho com `dirname` até o
+diretório mais fundo que consegue ver e, se esse diretório não tem `x`,
+responde "sem permissão para entrar em '/root': não dá para saber" em vez
+de "não existe". Por fim, o `~`: na linha de comando o shell troca `~` pelo
 diretório pessoal, mas o `read` entrega o texto literal, então o script faz
 essa troca para `~` e `~/...` usando `$HOME` (slide 28).
 
@@ -634,7 +667,10 @@ Com o arquivo de teste, a saída é exatamente a do enunciado: `/bin/bash`,
 **Validações:** as mesmas do ex7. Além disso, um campo de shell vazio vira
 `/bin/sh`: pelo manual do passwd (`man 5 passwd`), é esse o shell usado
 quando o campo está vazio. Sem esse tratamento, a saída teria uma linha em
-branco.
+branco. E um arquivo salvo no Windows (linhas terminadas em `\r\n`) tem o
+`\r` apagado: sem isso, `/bin/bash\r` e `/bin/bash` seriam linhas
+diferentes para o `uniq`, e num arquivo com os dois tipos de linha o mesmo
+shell apareceria duas vezes — idênticos na tela.
 
 **Racional:** o shell é o 7º (e último) campo, `cut -d: -f7`. A pegadinha
 está na dica do enunciado: o `uniq` só remove linhas repetidas
@@ -688,10 +724,12 @@ echo "testes/nome com espaço.txt" | ./ex2_tipo_arquivo.sh
 echo testes/link_teste.txt | ./ex2_tipo_arquivo.sh
 echo testes/link_quebrado | ./ex2_tipo_arquivo.sh
 echo '~' | ./ex2_tipo_arquivo.sh                     # o ~ digitado vira o $HOME
+echo /root/.bashrc | ./ex2_tipo_arquivo.sh           # sem permissão: não dá para saber
 
 ./ex3_relacao.sh 10 10                               # o if/else do enunciado diria "menor"
 ./ex3_relacao.sh 10 9
 [ 10 \< 9 ] && echo "como texto, 10 vem antes de 9"  # por isso -lt/-gt, e não \< e \>
+ls -l /bin/sh; sh ex3_relacao.sh 3 5                 # com o dash (slides 6 e 23): mesma resposta
 
 ./ex4_zerador.sh 010
 echo $((010))                                        # 8: sem o 10#, o $(( )) lê em octal

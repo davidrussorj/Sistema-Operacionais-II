@@ -29,6 +29,16 @@
 # Teoria (Aula 10): case - slides 45-47 | wildcard * - slide 17 |
 #                   -z / -n - slide 33 | $1, $2 e $# - slide 30
 
+# Os scripts da lista são escritos para o bash (#!/bin/bash), mas o slide 23
+# ensina também a "forma fácil", sh script.sh - e aí quem executa é o
+# /bin/sh, que no Ubuntu é o dash, não o bash (slide 6: "verificar com
+# ls -l /bin/sh"). O dash não tem alguns recursos do bash ([[ =~ ]], 10#...)
+# e o echo dele interpreta \ de outro jeito. A variável BASH_VERSION só
+# existe dentro do bash: se ela estiver vazia, o exec (slide 59) troca este
+# processo por um bash rodando o mesmo script, com os mesmos argumentos e a
+# mesma entrada.
+[ -n "$BASH_VERSION" ] || exec bash "$0" "$@"
+
 # ---------------------------------------------------------------------------
 # Validações (silenciosas, como pede o exemplo)
 # ---------------------------------------------------------------------------

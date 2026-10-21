@@ -19,6 +19,16 @@
 # Teoria (Aula 10): $* e o IFS - slides 29-30 | pipe - slide 16 |
 #                   $(comando) - slide 60
 
+# Os scripts da lista são escritos para o bash (#!/bin/bash), mas o slide 23
+# ensina também a "forma fácil", sh script.sh - e aí quem executa é o
+# /bin/sh, que no Ubuntu é o dash, não o bash (slide 6: "verificar com
+# ls -l /bin/sh"). O dash não tem alguns recursos do bash ([[ =~ ]], 10#...)
+# e o echo dele interpreta \ de outro jeito. A variável BASH_VERSION só
+# existe dentro do bash: se ela estiver vazia, o exec (slide 59) troca este
+# processo por um bash rodando o mesmo script, com os mesmos argumentos e a
+# mesma entrada.
+[ -n "$BASH_VERSION" ] || exec bash "$0" "$@"
+
 # uso: mostra como chamar o script e encerra com status 2 (uso incorreto).
 uso() {
     if [ $# -gt 0 ]; then
