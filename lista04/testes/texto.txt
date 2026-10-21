@@ -1,5 +1,0 @@
-O shell lê cada linha do script
-e executa os comandos em ordem.
-
-Palavras   separadas por   vários espaços
-	ou por TAB continuam sendo palavras.

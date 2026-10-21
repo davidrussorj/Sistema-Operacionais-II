@@ -3,7 +3,7 @@
 # Shell script não é compilado; o make faz o papel equivalente:
 #   make         dá permissão de execução e verifica a sintaxe dos scripts
 #   make test    faz o mesmo e roda a bateria de testes automáticos
-#   make clean   apaga os arquivos gerados pelo ex16 (arq.txt e erros.txt)
+# Nenhum script gera arquivos, então não há "make clean".
 
 # Todos os exercícios (ex*.sh) e o testador.
 SCRIPTS = $(wildcard ex*.sh)
@@ -23,11 +23,8 @@ check:
 	@echo "$(words $(SCRIPTS)) scripts prontos (sintaxe verificada)"
 
 # Roda os testes de todos os exercícios. Para testar só alguns:
-#   ./testes/rodar_testes.sh 7 8
+#   ./testes/rodar_testes.sh 3 4
 test: check
 	./$(TESTADOR)
 
-clean:
-	rm -f arq.txt erros.txt
-
-.PHONY: all check test clean
+.PHONY: all check test

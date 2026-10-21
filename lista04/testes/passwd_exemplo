@@ -1,10 +1,13 @@
 root:x:0:0:root:/root:/bin/bash
-daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
-marcos:x:1003:1003:Marcos,,,:/home/marcos:/bin/zsh
-bin:x:2:2:bin:/bin:/usr/sbin/nologin
-beatriz:x:1001:1001:Beatriz,,,:/home/beatriz:/bin/bash
-sync:x:4:65534:sync:/bin:/bin/sync
-ana:x:1002:1002:Ana,,,:/home/ana:/bin/bash
-www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
-carlos:x:1004:1004:Carlos,,,:/home/carlos:/bin/sh
-backup:x:34:34:backup:/var/backups:/usr/sbin/nologin
+bin:x:1:1:bin:/bin:/bin/false
+daemon:x:2:2:daemon:/sbin:/bin/false
+sync:x:5:0:sync:/sbin:/bin/sync
+shutdown:x:6:0:shutdown:/sbin:/sbin/shutdown
+halt:x:7:0:halt:/sbin:/sbin/halt
+ftp:x:14:50:FTP User:/var/ftp:/bin/false
+nobody:x:99:99:Nobody:/:/bin/false
+named:x:25:25:Domain name server:/var/named:/bin/false
+xfs:x:43:43:X Font Server:/etc/X11/fs:/bin/false
+mysql:x:27:27:MySQL server:/var/lib/mysql:/bin/bash
+ana:x:1001:1001:Ana Souza,Sala 12,2222-0000,:/home/ana:/bin/bash
+carlos:x:1002:1002::/home/carlos:/bin/bash

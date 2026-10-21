@@ -1,0 +1,1 @@
+Arquivo comum usado nos testes do exercício 2.
